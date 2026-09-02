@@ -1,22 +1,25 @@
 import * as vscode from 'vscode';
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
 import { fetchRedmineTicket } from './redmine';
-import { downloadImageAttachments } from './attachments';
+import { downloadImageAttachments, DownloadedImage } from './attachments';
 import { formatTicketPrompt } from './formatter';
 import { getBaseUrl, getApiKey, openConfigWebview } from './config';
 
-const INSERT_ATTACHMENT_COMMAND = 'github.copilot.chat.insertAttachment';
+const ATTACH_FILE_COMMAND = 'github.copilot.chat.attachFile';
 const INSERT_PROMPT_COMMAND = 'github.copilot.chat.insert';
 
 /**
- * Ensure GitHub Copilot Chat is available. Returns true when both insert
- * commands are registered, or when the user chooses to proceed anyway.
+ * Ensure GitHub Copilot Chat is available. Returns true when both commands are
+ * registered, or when the user chooses to proceed anyway.
  */
 async function ensureCopilotAvailable(): Promise<boolean> {
   const commands = await vscode.commands.getCommands(true);
   const hasInsert = commands.includes(INSERT_PROMPT_COMMAND);
-  const hasAttachment = commands.includes(INSERT_ATTACHMENT_COMMAND);
+  const hasAttach = commands.includes(ATTACH_FILE_COMMAND);
 
-  if (hasInsert && hasAttachment) {
+  if (hasInsert && hasAttach) {
     return true;
   }
 
@@ -25,6 +28,30 @@ async function ensureCopilotAvailable(): Promise<boolean> {
     'Proceed anyway'
   );
   return choice === 'Proceed anyway';
+}
+
+/** Sanitize an attachment filename and guarantee an image extension. */
+function safeFilename(filename: string, contentType: string): string {
+  const base = path.basename(filename).replace(/[^\w.\-]/g, '_') || 'image';
+  if (path.extname(base)) {
+    return base;
+  }
+  const ext = (contentType.split('/')[1] || 'png').toLowerCase();
+  const extMap: Record<string, string> = { jpg: 'jpg', jpeg: 'jpg', png: 'png', gif: 'gif', webp: 'webp' };
+  return `${base}.${extMap[ext] ?? 'png'}`;
+}
+
+/** Write downloaded images to a temp dir and return their file URIs. */
+function saveImagesToTemp(images: DownloadedImage[]): vscode.Uri[] {
+  if (images.length === 0) {
+    return [];
+  }
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'redmine-copilot-bridge-'));
+  return images.map((image) => {
+    const filePath = path.join(dir, safeFilename(image.filename, image.contentType));
+    fs.writeFileSync(filePath, image.bytes);
+    return vscode.Uri.file(filePath);
+  });
 }
 
 export function activate(context: vscode.ExtensionContext): void {
@@ -78,15 +105,13 @@ export function activate(context: vscode.ExtensionContext): void {
             progress.report({ message: 'Downloading image attachments…' });
             const images = await downloadImageAttachments(issue.attachments ?? [], apiKey, baseUrl);
 
-            progress.report({ message: 'Inserting into Copilot Chat…' });
-            for (const image of images) {
-              await vscode.commands.executeCommand(
-                INSERT_ATTACHMENT_COMMAND,
-                image.bytes,
-                image.filename
-              );
+            progress.report({ message: 'Attaching images to Copilot Chat…' });
+            const imageUris = saveImagesToTemp(images);
+            if (imageUris.length > 0) {
+              await vscode.commands.executeCommand(ATTACH_FILE_COMMAND, ...imageUris);
             }
 
+            progress.report({ message: 'Inserting prompt…' });
             const prompt = formatTicketPrompt(issue, images.length);
             await vscode.commands.executeCommand(INSERT_PROMPT_COMMAND, prompt);
           }

@@ -91,7 +91,8 @@ Then download the `.vsix` from the release page to install it.
 4. Filters attachments to image MIME types
    (`image/png`, `image/jpeg`, `image/jpg`, `image/gif`, `image/webp`), downloads
    each, and resolves its relative `content_url` against the base URL.
-5. Inserts each image via `github.copilot.chat.insertAttachment(bytes, filename)`.
+5. Saves each image to a temporary file and attaches it via
+   `github.copilot.chat.attachFile(uri...)`.
 6. Inserts a structured prompt via `github.copilot.chat.insert(prompt)`.
 
 ## Troubleshooting
@@ -100,9 +101,9 @@ Then download the `.vsix` from the release page to install it.
   and enter your key.
 - **"GitHub Copilot Chat does not appear to be installed or active"** — install
   and sign in to Copilot Chat, or run `github.copilot.chat.open` once first.
-- **Images don't appear in chat** — the `github.copilot.chat.insertAttachment`
-  command is not part of the public Copilot Chat API and may differ by version.
-  If your Copilot Chat build renamed it, update the `INSERT_ATTACHMENT_COMMAND`
-  constant in `src/extension.ts`.
+- **Images don't appear in chat** — this uses the `github.copilot.chat.attachFile`
+  command (undocumented, but confirmed by the VS Code team). If your Copilot Chat
+  build doesn't expose it, update the `ATTACH_FILE_COMMAND` constant in
+  `src/extension.ts`.
 - **401 Unauthorized** — verify the API key is valid and enabled under
   *My account → API access key* in Redmine.
