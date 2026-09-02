@@ -93,7 +93,8 @@ Then download the `.vsix` from the release page to install it.
    each, and resolves its relative `content_url` against the base URL.
 5. Saves each image to a temporary file and attaches it via
    `github.copilot.chat.attachFile(uri...)`.
-6. Inserts a structured prompt via `github.copilot.chat.insert(prompt)`.
+6. Inserts a structured prompt into the chat input via `workbench.action.chat.open`
+   with `isPartialQuery: true` (prefilled, not auto-sent).
 
 ## Troubleshooting
 

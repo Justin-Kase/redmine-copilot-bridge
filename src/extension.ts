@@ -7,42 +7,31 @@ import { downloadImageAttachments, DownloadedImage } from './attachments';
 import { formatTicketPrompt } from './formatter';
 import { getBaseUrl, getApiKey, openConfigWebview } from './config';
 
+const OPEN_CHAT_COMMAND = 'workbench.action.chat.open';
 const ATTACH_FILE_COMMAND = 'github.copilot.chat.attachFile';
-const INSERT_PROMPT_COMMAND = 'github.copilot.chat.insert';
 
 /**
  * Ensure GitHub Copilot Chat is installed and activated. Copilot Chat registers
- * several of its commands lazily, so we activate it explicitly before checking.
+ * some commands lazily, so we activate it explicitly before attaching files.
  */
 async function ensureCopilotReady(): Promise<boolean> {
-  if (await copilotCommandsAvailable()) {
+  const copilot = vscode.extensions.getExtension('github.copilot-chat');
+  if (copilot) {
+    if (!copilot.isActive) {
+      try {
+        await copilot.activate();
+      } catch {
+        // ignore; proceed and let the commands fail with a clear message
+      }
+    }
     return true;
   }
 
-  // Installed but not activated yet — activate it so its commands register.
-  const copilot = vscode.extensions.getExtension('github.copilot-chat');
-  if (copilot) {
-    try {
-      await copilot.activate();
-      await new Promise((resolve) => setTimeout(resolve, 300));
-      if (await copilotCommandsAvailable()) {
-        return true;
-      }
-    } catch {
-      // fall through to the warning
-    }
-  }
-
   const choice = await vscode.window.showWarningMessage(
-    'GitHub Copilot Chat does not appear to be installed or active. Import will likely fail.',
+    'GitHub Copilot Chat does not appear to be installed. Import will likely fail.',
     'Proceed anyway'
   );
   return choice === 'Proceed anyway';
-}
-
-async function copilotCommandsAvailable(): Promise<boolean> {
-  const commands = await vscode.commands.getCommands(true);
-  return commands.includes(INSERT_PROMPT_COMMAND) && commands.includes(ATTACH_FILE_COMMAND);
 }
 
 /** Sanitize an attachment filename and guarantee an image extension. */
@@ -128,7 +117,10 @@ export function activate(context: vscode.ExtensionContext): void {
 
             progress.report({ message: 'Inserting prompt…' });
             const prompt = formatTicketPrompt(issue, images.length);
-            await vscode.commands.executeCommand(INSERT_PROMPT_COMMAND, prompt);
+            await vscode.commands.executeCommand(OPEN_CHAT_COMMAND, {
+              query: prompt,
+              isPartialQuery: true,
+            });
           }
         );
 
