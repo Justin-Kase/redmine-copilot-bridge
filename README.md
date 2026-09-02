@@ -54,13 +54,27 @@ for the API key.
 
 ## Build & package
 
+Requires Node.js 20 or newer (`@vscode/vsce` requires it).
+
 ```bash
 npm run compile      # type-check + emit JS to out/
 npm run watch        # recompile on change
-npx vsce package     # produce redmine-copilot-bridge-<version>.vsix
+npm run package      # produce redmine-copilot-bridge-<version>.vsix
 ```
 
 Install the `.vsix` via **Extensions ▸ ⋯ ▸ Install from VSIX…**.
+
+## Releasing
+
+Push a tag starting with `v` (e.g. `v0.0.2`) and GitHub Actions builds the
+`.vsix` and attaches it to a release automatically:
+
+```bash
+git tag v0.0.2
+git push origin v0.0.2
+```
+
+Then download the `.vsix` from the release page to install it.
 
 ## Configuration
 

@@ -1,0 +1,45 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Align version with tag
+        shell: bash
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          CURRENT="$(node -p "require('./package.json').version")"
+          if [ "$CURRENT" != "$VERSION" ]; then
+            npm version --no-git-tag-version "$VERSION"
+          fi
+
+      - name: Package VSIX
+        run: npm run package
+
+      - name: Attach VSIX to release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" ./*.vsix \
+            --title "$GITHUB_REF_NAME" \
+            --generate-notes \
+            || gh release upload "$GITHUB_REF_NAME" ./*.vsix --clobber
