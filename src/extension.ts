@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { fetchRedmineTicket } from './redmine';
 import { downloadImageAttachments } from './attachments';
 import { formatTicketPrompt } from './formatter';
+import { getBaseUrl, getApiKey, openConfigWebview } from './config';
 
 const INSERT_ATTACHMENT_COMMAND = 'github.copilot.chat.insertAttachment';
 const INSERT_PROMPT_COMMAND = 'github.copilot.chat.insert';
@@ -26,52 +27,20 @@ async function ensureCopilotAvailable(): Promise<boolean> {
   return choice === 'Proceed anyway';
 }
 
-/**
- * Resolve the Redmine base URL from settings, prompting for it (and saving it)
- * on first use.
- */
-async function getBaseUrl(): Promise<string | undefined> {
-  const config = vscode.workspace.getConfiguration('redmineCopilotBridge');
-  const configured = config.get<string>('baseUrl')?.trim();
-  if (configured) {
-    return configured;
-  }
-
-  const entered = await vscode.window.showInputBox({
-    title: 'Redmine Copilot Bridge',
-    prompt: 'Enter your Redmine base URL (saved for next time)',
-    placeHolder: 'https://redmine.example.com',
-    validateInput: (value) => {
-      try {
-        const u = new URL(value);
-        return u.protocol === 'http:' || u.protocol === 'https:'
-          ? undefined
-          : 'URL must start with http:// or https://';
-      } catch {
-        return 'Enter a valid URL';
-      }
-    },
-  });
-
-  if (!entered) {
-    return undefined; // user cancelled
-  }
-
-  const normalized = entered.trim().replace(/\/+$/, '');
-  await config.update('baseUrl', normalized, vscode.ConfigurationTarget.Global);
-  return normalized;
-}
-
 export function activate(context: vscode.ExtensionContext): void {
-  const disposable = vscode.commands.registerCommand(
+  const importCommand = vscode.commands.registerCommand(
     'redmineCopilotBridge.importTicket',
     async () => {
       try {
-        const apiKey = process.env.REDMINE_API_KEY;
+        const apiKey = await getApiKey(context);
         if (!apiKey) {
-          vscode.window.showErrorMessage(
-            'The REDMINE_API_KEY environment variable is not set. Set it and reload the window.'
+          const choice = await vscode.window.showErrorMessage(
+            'No Redmine API key configured.',
+            'Configure...'
           );
+          if (choice === 'Configure...') {
+            await openConfigWebview(context);
+          }
           return;
         }
 
@@ -133,7 +102,12 @@ export function activate(context: vscode.ExtensionContext): void {
     }
   );
 
-  context.subscriptions.push(disposable);
+  const configureCommand = vscode.commands.registerCommand(
+    'redmineCopilotBridge.configure',
+    () => openConfigWebview(context)
+  );
+
+  context.subscriptions.push(importCommand, configureCommand);
 }
 
 export function deactivate(): void {

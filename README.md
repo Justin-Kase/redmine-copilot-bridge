@@ -13,34 +13,44 @@ Screenshots, mockups, and error captures land inline so Copilot can see them.
 
 - **Visual Studio Code** 1.90.0 or newer
 - **GitHub Copilot Chat** extension installed and signed in
-- A **Redmine API key** with read access to issues (exported as `REDMINE_API_KEY`)
+- A **Redmine API key** with read access to issues (configured via the extension —
+  see below)
 
 ## Setup
 
 ```bash
-git clone <this-repo> redmine-copilot-bridge
+git clone https://github.com/Justin-Kase/redmine-copilot-bridge.git
 cd redmine-copilot-bridge
 npm install
 ```
 
-Set your API key in the shell that launches VS Code:
+## Configure
 
-```bash
-export REDMINE_API_KEY=your-redmine-api-key
-code .
-```
+Run **Redmine Copilot Bridge: Configure…** from the Command Palette
+(`Cmd+Shift+P`). A form opens where you enter:
 
-> **Note:** the key is read at extension activation time. If you change it,
-> reload the window (`Developer: Reload Window`) so the extension picks it up.
+- **Base URL** — your Redmine instance, e.g. `https://redmine.example.com`
+  (no trailing slash). Saved to settings.
+- **API key** — your Redmine API key. Stored securely in the OS keychain via
+  VS Code's SecretStorage; it is never written to disk in plaintext.
+
+The API key can alternatively be provided via the `REDMINE_API_KEY` environment
+variable, which is used as a fallback when no key is stored.
+
+## Use
+
+Run **Redmine Copilot Bridge: Import Ticket**, enter the numeric ticket ID, and
+the ticket plus its images appear in Copilot Chat. If you haven't configured
+anything yet, you'll be prompted for the base URL and offered the Configure form
+for the API key.
 
 ## Run (debug)
 
 1. Open the folder in VS Code.
 2. Press **F5** (or **Run ▸ Start Debugging**). The `Run Extension` config
    compiles the TypeScript, then launches an Extension Development Host.
-3. In the dev host, open the Command Palette (`Cmd+Shift+P`) and run
+3. In the dev host, run **Redmine Copilot Bridge: Configure…**, then
    **Redmine Copilot Bridge: Import Ticket**.
-4. Enter the numeric ticket ID. The ticket and its images appear in Copilot Chat.
 
 ## Build & package
 
@@ -56,11 +66,12 @@ Install the `.vsix` via **Extensions ▸ ⋯ ▸ Install from VSIX…**.
 
 | Setting | Default | Description |
 |---|---|---|
-| `redmineCopilotBridge.baseUrl` | _(prompted on first use)_ | Base URL of your Redmine instance (no trailing slash). Entered on first use and saved. |
+| `redmineCopilotBridge.baseUrl` | _(configured via the form)_ | Base URL of your Redmine instance (no trailing slash). |
 
 ## How it works
 
-1. Reads the API key from the `REDMINE_API_KEY` environment variable.
+1. Reads the API key from the OS keychain (SecretStorage), falling back to the
+   `REDMINE_API_KEY` environment variable.
 2. Prompts for the ticket number.
 3. `GET /issues/<id>.json?include=attachments` with the `X-Redmine-API-Key` header.
 4. Filters attachments to image MIME types
@@ -71,8 +82,8 @@ Install the `.vsix` via **Extensions ▸ ⋯ ▸ Install from VSIX…**.
 
 ## Troubleshooting
 
-- **"REDMINE_API_KEY environment variable is not set"** — export it in the shell
-  that launched VS Code, then reload the window.
+- **"No Redmine API key configured"** — run **Redmine Copilot Bridge: Configure…**
+  and enter your key.
 - **"GitHub Copilot Chat does not appear to be installed or active"** — install
   and sign in to Copilot Chat, or run `github.copilot.chat.open` once first.
 - **Images don't appear in chat** — the `github.copilot.chat.insertAttachment`

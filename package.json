@@ -24,7 +24,8 @@
     "ticket"
   ],
   "activationEvents": [
-    "onCommand:redmineCopilotBridge.importTicket"
+    "onCommand:redmineCopilotBridge.importTicket",
+    "onCommand:redmineCopilotBridge.configure"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -32,6 +33,11 @@
       {
         "command": "redmineCopilotBridge.importTicket",
         "title": "Import Ticket",
+        "category": "Redmine Copilot Bridge"
+      },
+      {
+        "command": "redmineCopilotBridge.configure",
+        "title": "Configure...",
         "category": "Redmine Copilot Bridge"
       }
     ],
