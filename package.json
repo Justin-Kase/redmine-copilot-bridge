@@ -9,6 +9,10 @@
     "name": "Justin Trushell",
     "email": "justin.trushell@gmail.com"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Justin-Kase/redmine-copilot-bridge.git"
+  },
   "license": "MIT",
   "engines": {
     "vscode": "^1.90.0"
