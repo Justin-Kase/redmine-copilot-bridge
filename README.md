@@ -66,12 +66,12 @@ Install the `.vsix` via **Extensions ▸ ⋯ ▸ Install from VSIX…**.
 
 ## Releasing
 
-Push a tag starting with `v` (e.g. `v0.0.2`) and GitHub Actions builds the
+Push a tag starting with `v` (e.g. `v0.0.7`) and GitHub Actions builds the
 `.vsix` and attaches it to a release automatically:
 
 ```bash
-git tag v0.0.2
-git push origin v0.0.2
+git tag v0.0.7
+git push origin v0.0.7
 ```
 
 Then download the `.vsix` from the release page to install it.
