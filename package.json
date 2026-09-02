@@ -3,7 +3,7 @@
   "displayName": "Redmine Copilot Bridge",
   "description": "Import Redmine tickets and their image attachments directly into GitHub Copilot Chat.",
   "icon": "icon.png",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "publisher": "JustinTrushell",
   "author": {
     "name": "Justin Trushell",
