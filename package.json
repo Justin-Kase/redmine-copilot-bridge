@@ -5,6 +5,10 @@
   "icon": "icon.png",
   "version": "0.0.1",
   "publisher": "redmine-copilot-bridge",
+  "author": {
+    "name": "Justin Trushell",
+    "email": "justin.trushell@gmail.com"
+  },
   "license": "MIT",
   "engines": {
     "vscode": "^1.90.0"
