@@ -1,0 +1,60 @@
+{
+  "name": "redmine-copilot-bridge",
+  "displayName": "Redmine Copilot Bridge",
+  "description": "Import Redmine tickets and their image attachments directly into GitHub Copilot Chat.",
+  "icon": "icon.png",
+  "version": "0.0.1",
+  "publisher": "redmine-copilot-bridge",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "redmine",
+    "copilot",
+    "copilot-chat",
+    "issue",
+    "ticket"
+  ],
+  "activationEvents": [
+    "onCommand:redmineCopilotBridge.importTicket"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "redmineCopilotBridge.importTicket",
+        "title": "Import Ticket",
+        "category": "Redmine Copilot Bridge"
+      }
+    ],
+    "configuration": {
+      "title": "Redmine Copilot Bridge",
+      "properties": {
+        "redmineCopilotBridge.baseUrl": {
+          "type": "string",
+          "default": "",
+          "description": "Base URL of your Redmine instance (no trailing slash). You will be prompted for this the first time you import a ticket."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "package": "vsce package",
+    "lint": "tsc --noEmit -p ./"
+  },
+  "dependencies": {
+    "axios": "^1.7.7"
+  },
+  "devDependencies": {
+    "@types/node": "^18.19.50",
+    "@types/vscode": "^1.90.0",
+    "typescript": "^5.5.4"
+  }
+}
