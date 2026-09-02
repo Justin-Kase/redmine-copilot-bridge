@@ -11,16 +11,26 @@ const ATTACH_FILE_COMMAND = 'github.copilot.chat.attachFile';
 const INSERT_PROMPT_COMMAND = 'github.copilot.chat.insert';
 
 /**
- * Ensure GitHub Copilot Chat is available. Returns true when both commands are
- * registered, or when the user chooses to proceed anyway.
+ * Ensure GitHub Copilot Chat is installed and activated. Copilot Chat registers
+ * several of its commands lazily, so we activate it explicitly before checking.
  */
-async function ensureCopilotAvailable(): Promise<boolean> {
-  const commands = await vscode.commands.getCommands(true);
-  const hasInsert = commands.includes(INSERT_PROMPT_COMMAND);
-  const hasAttach = commands.includes(ATTACH_FILE_COMMAND);
-
-  if (hasInsert && hasAttach) {
+async function ensureCopilotReady(): Promise<boolean> {
+  if (await copilotCommandsAvailable()) {
     return true;
+  }
+
+  // Installed but not activated yet — activate it so its commands register.
+  const copilot = vscode.extensions.getExtension('github.copilot-chat');
+  if (copilot) {
+    try {
+      await copilot.activate();
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      if (await copilotCommandsAvailable()) {
+        return true;
+      }
+    } catch {
+      // fall through to the warning
+    }
   }
 
   const choice = await vscode.window.showWarningMessage(
@@ -28,6 +38,11 @@ async function ensureCopilotAvailable(): Promise<boolean> {
     'Proceed anyway'
   );
   return choice === 'Proceed anyway';
+}
+
+async function copilotCommandsAvailable(): Promise<boolean> {
+  const commands = await vscode.commands.getCommands(true);
+  return commands.includes(INSERT_PROMPT_COMMAND) && commands.includes(ATTACH_FILE_COMMAND);
 }
 
 /** Sanitize an attachment filename and guarantee an image extension. */
@@ -71,7 +86,7 @@ export function activate(context: vscode.ExtensionContext): void {
           return;
         }
 
-        if (!(await ensureCopilotAvailable())) {
+        if (!(await ensureCopilotReady())) {
           return;
         }
 
