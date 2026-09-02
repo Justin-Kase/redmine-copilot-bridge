@@ -8,11 +8,10 @@ import { formatTicketPrompt } from './formatter';
 import { getBaseUrl, getApiKey, openConfigWebview } from './config';
 
 const OPEN_CHAT_COMMAND = 'workbench.action.chat.open';
-const ATTACH_FILE_COMMAND = 'github.copilot.chat.attachFile';
 
 /**
- * Ensure GitHub Copilot Chat is installed and activated. Copilot Chat registers
- * some commands lazily, so we activate it explicitly before attaching files.
+ * Ensure GitHub Copilot Chat is installed and activated, so the attached
+ * images are processed with vision when the prompt is sent.
  */
 async function ensureCopilotReady(): Promise<boolean> {
   const copilot = vscode.extensions.getExtension('github.copilot-chat');
@@ -21,7 +20,7 @@ async function ensureCopilotReady(): Promise<boolean> {
       try {
         await copilot.activate();
       } catch {
-        // ignore; proceed and let the commands fail with a clear message
+        // ignore; proceed anyway
       }
     }
     return true;
@@ -109,17 +108,14 @@ export function activate(context: vscode.ExtensionContext): void {
             progress.report({ message: 'Downloading image attachments…' });
             const images = await downloadImageAttachments(issue.attachments ?? [], apiKey, baseUrl);
 
-            progress.report({ message: 'Attaching images to Copilot Chat…' });
+            progress.report({ message: 'Inserting into Copilot Chat…' });
             const imageUris = saveImagesToTemp(images);
-            if (imageUris.length > 0) {
-              await vscode.commands.executeCommand(ATTACH_FILE_COMMAND, ...imageUris);
-            }
-
-            progress.report({ message: 'Inserting prompt…' });
             const prompt = formatTicketPrompt(issue, images.length);
+
             await vscode.commands.executeCommand(OPEN_CHAT_COMMAND, {
               query: prompt,
               isPartialQuery: true,
+              attachFiles: imageUris,
             });
           }
         );

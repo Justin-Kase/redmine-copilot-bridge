@@ -91,10 +91,9 @@ Then download the `.vsix` from the release page to install it.
 4. Filters attachments to image MIME types
    (`image/png`, `image/jpeg`, `image/jpg`, `image/gif`, `image/webp`), downloads
    each, and resolves its relative `content_url` against the base URL.
-5. Saves each image to a temporary file and attaches it via
-   `github.copilot.chat.attachFile(uri...)`.
-6. Inserts a structured prompt into the chat input via `workbench.action.chat.open`
-   with `isPartialQuery: true` (prefilled, not auto-sent).
+5. Saves each image to a temporary file.
+6. Opens the chat with the structured prompt (`isPartialQuery: true`) and the
+   image files attached via the `attachFiles` option of `workbench.action.chat.open`.
 
 ## Troubleshooting
 
