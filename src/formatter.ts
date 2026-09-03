@@ -5,14 +5,14 @@ function field(label: string, value: string | undefined): string {
 }
 
 /**
- * Build a structured prompt describing the ticket. The image attachments are
+ * Build a structured prompt describing the ticket. The attachments are
  * already inserted into Copilot Chat separately; this prompt references them so
  * the model treats them as part of the same request.
  *
  * @param issue The fetched Redmine issue.
- * @param imageCount Number of image attachments inserted (for the prompt's context).
+ * @param attachmentCount Number of attachments inserted (for the prompt's context).
  */
-export function formatTicketPrompt(issue: RedmineIssue, imageCount: number): string {
+export function formatTicketPrompt(issue: RedmineIssue, attachmentCount: number): string {
   const lines: string[] = [];
 
   lines.push(`Redmine Ticket #${issue.id}: ${issue.subject}`);
@@ -33,14 +33,14 @@ export function formatTicketPrompt(issue: RedmineIssue, imageCount: number): str
   lines.push(issue.description && issue.description.trim() ? issue.description.trim() : '(no description)');
   lines.push('');
 
-  if (imageCount > 0) {
+  if (attachmentCount > 0) {
     lines.push(`## Attachments`);
     lines.push('');
-    lines.push(`${imageCount} image attachment${imageCount === 1 ? '' : 's'} attached above. Review them in the context of this ticket.`);
+    lines.push(`${attachmentCount} attachment${attachmentCount === 1 ? '' : 's'} attached above. Review them in the context of this ticket.`);
     lines.push('');
   }
 
-  lines.push('Please analyze this ticket (including any attached screenshots) and help me work on it.');
+  lines.push('Please analyze this ticket (including any attached files) and help me work on it.');
 
   return lines.join('\n');
 }

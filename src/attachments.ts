@@ -1,30 +1,15 @@
 import axios from 'axios';
 import { RedmineAttachment } from './redmine';
 
-/** MIME types considered "images" for the purpose of this extension. */
-export const ALLOWED_IMAGE_MIME_TYPES: ReadonlySet<string> = new Set([
-  'image/png',
-  'image/jpeg',
-  'image/jpg',
-  'image/gif',
-  'image/webp',
-]);
-
-/** A downloaded image attachment ready to be handed to Copilot Chat. */
-export interface DownloadedImage {
+/** A downloaded attachment ready to be handed to Copilot Chat. */
+export interface DownloadedAttachment {
   filename: string;
   contentType: string;
   bytes: Uint8Array;
 }
 
-/**
- * Normalize a MIME type (strip parameters, lowercase) and test it against the
- * allowed image set.
- */
-export function isImageAttachment(contentType: string): boolean {
-  const normalized = contentType.split(';')[0].trim().toLowerCase();
-  return ALLOWED_IMAGE_MIME_TYPES.has(normalized);
-}
+/** @deprecated Use DownloadedAttachment instead. */
+export type DownloadedImage = DownloadedAttachment;
 
 /**
  * Resolve a Redmine `content_url` (relative to the Redmine root) to an absolute URL.
@@ -49,24 +34,23 @@ export function resolveContentUrl(contentUrl: string, baseUrl: string): string {
 }
 
 /**
- * Download all image attachments for a ticket.
+ * Download all attachments for a ticket.
  *
- * Non-image attachments are skipped. Failures on an individual attachment are
- * logged and skipped rather than aborting the whole import.
+ * Failures on an individual attachment are logged and skipped rather than
+ * aborting the whole import.
  *
  * @param attachments Attachments listed on the issue.
  * @param apiKey      Redmine API key.
  * @param baseUrl     Base URL used to resolve relative `content_url` values.
  */
-export async function downloadImageAttachments(
+export async function downloadAttachments(
   attachments: RedmineAttachment[],
   apiKey: string,
   baseUrl: string
-): Promise<DownloadedImage[]> {
-  const images = attachments.filter((a) => isImageAttachment(a.content_type));
-  const downloaded: DownloadedImage[] = [];
+): Promise<DownloadedAttachment[]> {
+  const downloaded: DownloadedAttachment[] = [];
 
-  for (const attachment of images) {
+  for (const attachment of attachments) {
     const url = resolveContentUrl(attachment.content_url, baseUrl);
     try {
       const response = await axios.get(url, {
@@ -87,3 +71,9 @@ export async function downloadImageAttachments(
 
   return downloaded;
 }
+
+/** Alias for callers that prefer the explicit operation name. */
+export const downloadAllAttachments = downloadAttachments;
+
+/** @deprecated Use downloadAttachments instead. */
+export const downloadImageAttachments = downloadAttachments;

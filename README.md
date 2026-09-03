@@ -1,13 +1,14 @@
 # Redmine Copilot Bridge
 
-Import Redmine tickets — including their image attachments — directly into GitHub
-Copilot Chat, so you can discuss a ticket with full visual context in one step.
+Import Redmine tickets — including all of their attachments — directly into
+GitHub Copilot Chat, so you can discuss a ticket with full context in one step.
 
 ## What it does
 
-One command pulls a Redmine issue, downloads every image attachment, inserts each
-image into Copilot Chat, then inserts a structured prompt describing the ticket.
-Screenshots, mockups, and error captures land inline so Copilot can see them.
+One command pulls a Redmine issue, downloads every attachment, inserts each file
+into Copilot Chat, then inserts a structured prompt describing the ticket.
+Screenshots, mockups, email files, PDFs, and other attachments are available to
+Copilot in the context of the ticket.
 
 ## Requirements
 
@@ -40,7 +41,7 @@ variable, which is used as a fallback when no key is stored.
 ## Use
 
 Run **Redmine Copilot Bridge: Import Ticket**, enter the numeric ticket ID, and
-the ticket plus its images appear in Copilot Chat. If you haven't configured
+the ticket plus its attachments appear in Copilot Chat. If you haven't configured
 anything yet, you'll be prompted for the base URL and offered the Configure form
 for the API key.
 
@@ -88,12 +89,11 @@ Then download the `.vsix` from the release page to install it.
    `REDMINE_API_KEY` environment variable.
 2. Prompts for the ticket number.
 3. `GET /issues/<id>.json?include=attachments` with the `X-Redmine-API-Key` header.
-4. Filters attachments to image MIME types
-   (`image/png`, `image/jpeg`, `image/jpg`, `image/gif`, `image/webp`), downloads
-   each, and resolves its relative `content_url` against the base URL.
-5. Saves each image to a temporary file.
+4. Downloads every attachment and resolves its relative `content_url` against
+   the base URL.
+5. Saves each attachment to a temporary file.
 6. Opens the chat with the structured prompt (`isPartialQuery: true`) and the
-   image files attached via the `attachFiles` option of `workbench.action.chat.open`.
+   files attached via the `attachFiles` option of `workbench.action.chat.open`.
 
 ## Troubleshooting
 
@@ -101,9 +101,8 @@ Then download the `.vsix` from the release page to install it.
   and enter your key.
 - **"GitHub Copilot Chat does not appear to be installed or active"** — install
   and sign in to Copilot Chat, or run `github.copilot.chat.open` once first.
-- **Images don't appear in chat** — this uses the `github.copilot.chat.attachFile`
-  command (undocumented, but confirmed by the VS Code team). If your Copilot Chat
-  build doesn't expose it, update the `ATTACH_FILE_COMMAND` constant in
-  `src/extension.ts`.
+- **Attachments don't appear in chat** — files are passed using the
+  `attachFiles` option of `workbench.action.chat.open`. Update VS Code and
+  Copilot Chat if attachments are not available in your build.
 - **401 Unauthorized** — verify the API key is valid and enabled under
   *My account → API access key* in Redmine.

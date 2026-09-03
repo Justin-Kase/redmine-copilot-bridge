@@ -3,7 +3,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { fetchRedmineTicket } from './redmine';
-import { downloadImageAttachments, DownloadedImage } from './attachments';
+import { downloadAttachments, DownloadedAttachment } from './attachments';
 import { formatTicketPrompt } from './formatter';
 import { getBaseUrl, getApiKey, openConfigWebview } from './config';
 
@@ -33,26 +33,25 @@ async function ensureCopilotReady(): Promise<boolean> {
   return choice === 'Proceed anyway';
 }
 
-/** Sanitize an attachment filename and guarantee an image extension. */
+/** Sanitize an attachment filename while preserving its extension. */
 function safeFilename(filename: string, contentType: string): string {
-  const base = path.basename(filename).replace(/[^\w.\-]/g, '_') || 'image';
+  const base = path.basename(filename).replace(/[^\w.\-]/g, '_') || 'attachment';
   if (path.extname(base)) {
     return base;
   }
-  const ext = (contentType.split('/')[1] || 'png').toLowerCase();
-  const extMap: Record<string, string> = { jpg: 'jpg', jpeg: 'jpg', png: 'png', gif: 'gif', webp: 'webp' };
-  return `${base}.${extMap[ext] ?? 'png'}`;
+  const ext = (contentType.split(';')[0].split('/')[1] || '').toLowerCase().replace(/[^\w-]/g, '');
+  return ext ? `${base}.${ext}` : base;
 }
 
-/** Write downloaded images to a temp dir and return their file URIs. */
-function saveImagesToTemp(images: DownloadedImage[]): vscode.Uri[] {
-  if (images.length === 0) {
+/** Write downloaded attachments to a temp dir and return their file URIs. */
+function saveAttachmentsToTemp(attachments: DownloadedAttachment[]): vscode.Uri[] {
+  if (attachments.length === 0) {
     return [];
   }
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'redmine-copilot-bridge-'));
-  return images.map((image) => {
-    const filePath = path.join(dir, safeFilename(image.filename, image.contentType));
-    fs.writeFileSync(filePath, image.bytes);
+  return attachments.map((attachment) => {
+    const filePath = path.join(dir, safeFilename(attachment.filename, attachment.contentType));
+    fs.writeFileSync(filePath, attachment.bytes);
     return vscode.Uri.file(filePath);
   });
 }
@@ -105,17 +104,17 @@ export function activate(context: vscode.ExtensionContext): void {
             progress.report({ message: 'Fetching ticket…' });
             const issue = await fetchRedmineTicket(ticketId, apiKey, baseUrl);
 
-            progress.report({ message: 'Downloading image attachments…' });
-            const images = await downloadImageAttachments(issue.attachments ?? [], apiKey, baseUrl);
+            progress.report({ message: 'Downloading attachments…' });
+            const attachments = await downloadAttachments(issue.attachments ?? [], apiKey, baseUrl);
 
             progress.report({ message: 'Inserting into Copilot Chat…' });
-            const imageUris = saveImagesToTemp(images);
-            const prompt = formatTicketPrompt(issue, images.length);
+            const attachmentUris = saveAttachmentsToTemp(attachments);
+            const prompt = formatTicketPrompt(issue, attachments.length);
 
             await vscode.commands.executeCommand(OPEN_CHAT_COMMAND, {
               query: prompt,
               isPartialQuery: true,
-              attachFiles: imageUris,
+              attachFiles: attachmentUris,
             });
           }
         );
