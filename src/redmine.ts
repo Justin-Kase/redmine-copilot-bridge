@@ -1,4 +1,5 @@
 import axios from 'axios';
+import * as https from 'https';
 
 /** A Redmine attachment as returned by the issues API with `?include=attachments`. */
 export interface RedmineAttachment {
@@ -36,17 +37,27 @@ export interface RedmineTicket {
 }
 
 /**
+ * Build an HTTPS agent that optionally skips certificate verification.
+ * Only use for self-signed or internally-signed Redmine certificates.
+ */
+export function createHttpsAgent(allowInsecureTls: boolean): https.Agent | undefined {
+  return allowInsecureTls ? new https.Agent({ rejectUnauthorized: false }) : undefined;
+}
+
+/**
  * Fetch a single Redmine ticket (with its attachments) using the API key.
  *
  * @param id      The numeric issue id.
  * @param apiKey  Redmine API key (sent as the `X-Redmine-API-Key` header).
  * @param baseUrl Base URL of the Redmine instance (no trailing slash).
+ * @param allowInsecureTls Skip TLS certificate verification (for self-signed certs).
  * @returns The parsed issue object.
  */
 export async function fetchRedmineTicket(
   id: string | number,
   apiKey: string,
-  baseUrl: string
+  baseUrl: string,
+  allowInsecureTls: boolean = false
 ): Promise<RedmineIssue> {
   const root = baseUrl.replace(/\/+$/, '');
   const url = `${root}/issues/${encodeURIComponent(String(id))}.json?include=attachments`;
@@ -57,6 +68,7 @@ export async function fetchRedmineTicket(
       Accept: 'application/json',
     },
     timeout: 30_000,
+    httpsAgent: createHttpsAgent(allowInsecureTls),
   });
 
   if (!response.data || !response.data.issue) {

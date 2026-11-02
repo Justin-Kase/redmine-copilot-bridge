@@ -11,7 +11,7 @@ const OPEN_CHAT_COMMAND = 'workbench.action.chat.open';
 
 /**
  * Ensure GitHub Copilot Chat is installed and activated, so the attached
- * images are processed with vision when the prompt is sent.
+ * files are processed with vision when the prompt is sent.
  */
 async function ensureCopilotReady(): Promise<boolean> {
   const copilot = vscode.extensions.getExtension('github.copilot-chat');
@@ -94,6 +94,10 @@ export function activate(context: vscode.ExtensionContext): void {
           return; // user cancelled
         }
 
+        const allowInsecureTls = vscode.workspace
+          .getConfiguration('redmineCopilotBridge')
+          .get<boolean>('allowInsecureTls', false);
+
         await vscode.window.withProgress(
           {
             location: vscode.ProgressLocation.Notification,
@@ -102,10 +106,15 @@ export function activate(context: vscode.ExtensionContext): void {
           },
           async (progress) => {
             progress.report({ message: 'Fetching ticket…' });
-            const issue = await fetchRedmineTicket(ticketId, apiKey, baseUrl);
+            const issue = await fetchRedmineTicket(ticketId, apiKey, baseUrl, allowInsecureTls);
 
             progress.report({ message: 'Downloading attachments…' });
-            const attachments = await downloadAttachments(issue.attachments ?? [], apiKey, baseUrl);
+            const attachments = await downloadAttachments(
+              issue.attachments ?? [],
+              apiKey,
+              baseUrl,
+              allowInsecureTls
+            );
 
             progress.report({ message: 'Inserting into Copilot Chat…' });
             const attachmentUris = saveAttachmentsToTemp(attachments);
@@ -124,6 +133,21 @@ export function activate(context: vscode.ExtensionContext): void {
         );
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
+        if (/certificate|issuer|self-signed|ssl|tls|unable to verify/i.test(message)) {
+          const choice = await vscode.window.showErrorMessage(
+            `Could not verify the Redmine server's TLS certificate: ${message}`,
+            'Enable insecure TLS'
+          );
+          if (choice === 'Enable insecure TLS') {
+            await vscode.workspace
+              .getConfiguration('redmineCopilotBridge')
+              .update('allowInsecureTls', true, vscode.ConfigurationTarget.Global);
+            vscode.window.showInformationMessage(
+              'Insecure TLS enabled. Run "Import Ticket" again.'
+            );
+          }
+          return;
+        }
         vscode.window.showErrorMessage(`Failed to import Redmine ticket: ${message}`);
       }
     }

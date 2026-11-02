@@ -52,6 +52,11 @@
           "type": "string",
           "default": "",
           "description": "Base URL of your Redmine instance (no trailing slash). You will be prompted for this the first time you import a ticket."
+        },
+        "redmineCopilotBridge.allowInsecureTls": {
+          "type": "boolean",
+          "default": false,
+          "description": "Disable TLS certificate verification when connecting to Redmine. Enable only if Redmine uses a self-signed or internally-signed certificate."
         }
       }
     }

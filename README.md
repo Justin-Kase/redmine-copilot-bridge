@@ -67,12 +67,12 @@ Install the `.vsix` via **Extensions ▸ ⋯ ▸ Install from VSIX…**.
 
 ## Releasing
 
-Push a tag starting with `v` (e.g. `v0.0.7`) and GitHub Actions builds the
+Push a tag starting with `v` (e.g. `v0.0.8`) and GitHub Actions builds the
 `.vsix` and attaches it to a release automatically:
 
 ```bash
-git tag v0.0.7
-git push origin v0.0.7
+git tag v0.0.8
+git push origin v0.0.8
 ```
 
 Then download the `.vsix` from the release page to install it.
@@ -82,6 +82,7 @@ Then download the `.vsix` from the release page to install it.
 | Setting | Default | Description |
 |---|---|---|
 | `redmineCopilotBridge.baseUrl` | _(configured via the form)_ | Base URL of your Redmine instance (no trailing slash). |
+| `redmineCopilotBridge.allowInsecureTls` | `false` | Skip TLS certificate verification. Enable only for self-signed or internally-signed Redmine certificates. |
 
 ## How it works
 
@@ -104,5 +105,9 @@ Then download the `.vsix` from the release page to install it.
 - **Attachments don't appear in chat** — files are passed using the
   `attachFiles` option of `workbench.action.chat.open`. Update VS Code and
   Copilot Chat if attachments are not available in your build.
+- **"unable to get local issuer certificate" / TLS error** — Redmine uses a
+  self-signed or internally-signed certificate. Enable the
+  `redmineCopilotBridge.allowInsecureTls` setting (or accept the prompt the
+  extension shows), then retry.
 - **401 Unauthorized** — verify the API key is valid and enabled under
   *My account → API access key* in Redmine.
