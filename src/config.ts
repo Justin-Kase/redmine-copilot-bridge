@@ -50,6 +50,7 @@ export async function openConfigWebview(context: vscode.ExtensionContext): Promi
   const config = vscode.workspace.getConfiguration(CONFIG_SECTION);
   const baseUrl = config.get<string>('baseUrl') ?? '';
   const hasKey = !!(await context.secrets.get(SECRET_KEY));
+  const allowInsecureTls = config.get<boolean>('allowInsecureTls', false);
 
   const panel = vscode.window.createWebviewPanel(
     'redmineCopilotBridge.config',
@@ -58,7 +59,7 @@ export async function openConfigWebview(context: vscode.ExtensionContext): Promi
     { enableScripts: true, retainContextWhenHidden: true }
   );
 
-  panel.webview.html = getConfigHtml(baseUrl, hasKey, panel.webview);
+  panel.webview.html = getConfigHtml(baseUrl, hasKey, allowInsecureTls, panel.webview);
 
   const messageDisposable = panel.webview.onDidReceiveMessage(async (message: ConfigMessage) => {
     switch (message.command) {
@@ -69,9 +70,9 @@ export async function openConfigWebview(context: vscode.ExtensionContext): Promi
           return;
         }
 
-        await vscode.workspace
-          .getConfiguration(CONFIG_SECTION)
-          .update('baseUrl', normalized, vscode.ConfigurationTarget.Global);
+        const settings = vscode.workspace.getConfiguration(CONFIG_SECTION);
+        await settings.update('baseUrl', normalized, vscode.ConfigurationTarget.Global);
+        await settings.update('allowInsecureTls', !!message.allowInsecureTls, vscode.ConfigurationTarget.Global);
 
         const apiKey = (message.apiKey ?? '').trim();
         if (apiKey) {
@@ -95,6 +96,7 @@ interface ConfigMessage {
   command: 'save' | 'cancel';
   baseUrl?: string;
   apiKey?: string;
+  allowInsecureTls?: boolean;
 }
 
 function normalizeBaseUrl(raw: string | undefined): string | undefined {
@@ -130,7 +132,12 @@ function escapeHtml(value: string): string {
     .replace(/"/g, '&quot;');
 }
 
-function getConfigHtml(baseUrl: string, hasKey: boolean, webview: vscode.Webview): string {
+function getConfigHtml(
+  baseUrl: string,
+  hasKey: boolean,
+  allowInsecureTls: boolean,
+  webview: vscode.Webview
+): string {
   const nonce = getNonce();
   const keyPlaceholder = hasKey
     ? 'Leave blank to keep the stored key'
@@ -164,6 +171,9 @@ function getConfigHtml(baseUrl: string, hasKey: boolean, webview: vscode.Webview
     font-size: 13px;
   }
   input:focus { outline: 1px solid var(--vscode-focusBorder); }
+  .tls-row { display: flex; align-items: center; gap: 8px; margin: 18px 0 0; }
+  .tls-row input { width: auto; margin: 0; }
+  .tls-row label { margin: 0; font-size: 12px; }
   .hint { font-size: 11px; color: var(--vscode-descriptionForeground); margin: 6px 0 0; }
   .error { color: var(--vscode-errorForeground); font-size: 12px; margin: 12px 0 0; }
   .actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 22px; }
@@ -193,6 +203,12 @@ function getConfigHtml(baseUrl: string, hasKey: boolean, webview: vscode.Webview
     <input type="password" id="apiKey" placeholder="${escapeHtml(keyPlaceholder)}" autocomplete="new-password" />
     <p class="hint">${hasKey ? 'An API key is already stored in your keychain. Leave the field blank to keep it.' : 'Stored securely in your OS keychain — never written to disk in plaintext.'}</p>
 
+    <div class="tls-row">
+      <input type="checkbox" id="allowInsecureTls" ${allowInsecureTls ? 'checked' : ''} />
+      <label for="allowInsecureTls">Allow insecure TLS (skip certificate verification)</label>
+    </div>
+    <p class="hint">Only enable if Redmine uses a self-signed or internally-signed certificate.</p>
+
     <p id="error" class="error" hidden></p>
 
     <div class="actions">
@@ -215,11 +231,12 @@ function getConfigHtml(baseUrl: string, hasKey: boolean, webview: vscode.Webview
       e.preventDefault();
       const baseUrl = document.getElementById('baseUrl').value.trim();
       const apiKey = document.getElementById('apiKey').value.trim();
+      const allowInsecureTls = document.getElementById('allowInsecureTls').checked;
       if (!/^https?:\\/\\//i.test(baseUrl)) {
         showError('Enter a valid base URL starting with http:// or https://');
         return;
       }
-      vscode.postMessage({ command: 'save', baseUrl: baseUrl, apiKey: apiKey });
+      vscode.postMessage({ command: 'save', baseUrl: baseUrl, apiKey: apiKey, allowInsecureTls: allowInsecureTls });
     });
 
     document.getElementById('cancel').addEventListener('click', function () {
