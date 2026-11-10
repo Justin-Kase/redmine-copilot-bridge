@@ -97,6 +97,9 @@ export function activate(context: vscode.ExtensionContext): void {
         const allowInsecureTls = vscode.workspace
           .getConfiguration('redmineCopilotBridge')
           .get<boolean>('allowInsecureTls', false);
+        console.log(
+          `[redmine-copilot-bridge] Importing #${ticketId} — allowInsecureTls = ${allowInsecureTls}`
+        );
 
         await vscode.window.withProgress(
           {

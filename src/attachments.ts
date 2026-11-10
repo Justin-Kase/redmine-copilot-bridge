@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { RedmineAttachment, createHttpsAgent } from './redmine';
+import { RedmineAttachment, createHttpsAgent, withInsecureTls } from './redmine';
 
 /** A downloaded attachment ready to be handed to Copilot Chat. */
 export interface DownloadedAttachment {
@@ -55,12 +55,14 @@ export async function downloadAttachments(
   for (const attachment of attachments) {
     const url = resolveContentUrl(attachment.content_url, baseUrl);
     try {
-      const response = await axios.get(url, {
-        headers: { 'X-Redmine-API-Key': apiKey },
-        responseType: 'arraybuffer',
-        timeout: 60_000,
-        httpsAgent: createHttpsAgent(allowInsecureTls),
-      });
+      const response = await withInsecureTls(allowInsecureTls, () =>
+        axios.get(url, {
+          headers: { 'X-Redmine-API-Key': apiKey },
+          responseType: 'arraybuffer',
+          timeout: 60_000,
+          httpsAgent: createHttpsAgent(allowInsecureTls),
+        })
+      );
       downloaded.push({
         filename: attachment.filename,
         contentType: attachment.content_type,

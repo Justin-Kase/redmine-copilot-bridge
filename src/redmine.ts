@@ -45,6 +45,27 @@ export function createHttpsAgent(allowInsecureTls: boolean): https.Agent | undef
 }
 
 /**
+ * Run a request with TLS verification bypassed when `allowInsecureTls` is set.
+ * The custom httpsAgent (rejectUnauthorized: false) is the clean, scoped mechanism;
+ * NODE_TLS_REJECT_UNAUTHORIZED is a belt-and-suspenders fallback for environments
+ * (corporate MITM proxies, some Electron builds) that ignore the agent.
+ */
+export async function withInsecureTls<T>(
+  allowInsecureTls: boolean,
+  fn: () => Promise<T>
+): Promise<T> {
+  if (!allowInsecureTls) return fn();
+  const prev = process.env.NODE_TLS_REJECT_UNAUTHORIZED;
+  process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+  try {
+    return await fn();
+  } finally {
+    if (prev === undefined) delete process.env.NODE_TLS_REJECT_UNAUTHORIZED;
+    else process.env.NODE_TLS_REJECT_UNAUTHORIZED = prev;
+  }
+}
+
+/**
  * Fetch a single Redmine ticket (with its attachments) using the API key.
  *
  * @param id      The numeric issue id.
@@ -62,14 +83,16 @@ export async function fetchRedmineTicket(
   const root = baseUrl.replace(/\/+$/, '');
   const url = `${root}/issues/${encodeURIComponent(String(id))}.json?include=attachments`;
 
-  const response = await axios.get<RedmineTicket>(url, {
-    headers: {
-      'X-Redmine-API-Key': apiKey,
-      Accept: 'application/json',
-    },
-    timeout: 30_000,
-    httpsAgent: createHttpsAgent(allowInsecureTls),
-  });
+  const response = await withInsecureTls(allowInsecureTls, () =>
+    axios.get<RedmineTicket>(url, {
+      headers: {
+        'X-Redmine-API-Key': apiKey,
+        Accept: 'application/json',
+      },
+      timeout: 30_000,
+      httpsAgent: createHttpsAgent(allowInsecureTls),
+    })
+  );
 
   if (!response.data || !response.data.issue) {
     throw new Error(`Redmine returned an unexpected payload for issue #${id}.`);
