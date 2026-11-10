@@ -34,6 +34,8 @@ Run **Redmine Copilot Bridge: Configure…** from the Command Palette
   (no trailing slash). Saved to settings.
 - **API key** — your Redmine API key. Stored securely in the OS keychain via
   VS Code's SecretStorage; it is never written to disk in plaintext.
+- **Allow insecure TLS** — enable this only if your Redmine instance uses a
+  self-signed or internally-signed certificate (otherwise leave it off).
 
 The API key can alternatively be provided via the `REDMINE_API_KEY` environment
 variable, which is used as a fallback when no key is stored.
@@ -55,7 +57,7 @@ for the API key.
 
 ## Build & package
 
-Requires Node.js 20 or newer (`@vscode/vsce` requires it).
+Requires Node.js 22 or newer (`@vscode/vsce` requires it).
 
 ```bash
 npm run compile      # type-check + emit JS to out/
@@ -67,15 +69,14 @@ Install the `.vsix` via **Extensions ▸ ⋯ ▸ Install from VSIX…**.
 
 ## Releasing
 
-Push a tag starting with `v` (e.g. `v0.0.8`) and GitHub Actions builds the
-`.vsix` and attaches it to a release automatically:
+Push a tag starting with `v` and GitHub Actions builds the `.vsix`, publishes
+it to the VS Code Marketplace (via Trusted Publishing — no PAT required), and
+attaches it to a GitHub release automatically:
 
 ```bash
-git tag v0.0.8
-git push origin v0.0.8
+git tag v0.0.13
+git push origin v0.0.13
 ```
-
-Then download the `.vsix` from the release page to install it.
 
 ## Configuration
 
@@ -111,3 +112,7 @@ Then download the `.vsix` from the release page to install it.
   extension shows), then retry.
 - **401 Unauthorized** — verify the API key is valid and enabled under
   *My account → API access key* in Redmine.
+- **The `.vsix` won't install / still running an old version (Windows)** —
+  install it from *inside* VS Code (Extensions ▸ ⋯ ▸ Install from VSIX…) or
+  `code --install-extension <file>.vsix`. Double-clicking the `.vsix` opens
+  Visual Studio's installer, which cannot install VS Code extensions.
