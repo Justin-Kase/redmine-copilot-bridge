@@ -137,17 +137,30 @@ export function activate(context: vscode.ExtensionContext): void {
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         if (/certificate|issuer|self-signed|ssl|tls|unable to verify/i.test(message)) {
+          const cfg = vscode.workspace.getConfiguration('redmineCopilotBridge');
+          const curTls = cfg.get<boolean>('allowInsecureTls', false);
+          const curUrl = cfg.get<string>('baseUrl', '');
           const choice = await vscode.window.showErrorMessage(
-            `Could not verify the Redmine server's TLS certificate: ${message}`,
+            `Could not verify the Redmine server's TLS certificate: ${message}\n` +
+              `[debug] allowInsecureTls=${curTls}, baseUrl=${curUrl || '(unset)'}`,
             'Enable insecure TLS'
           );
           if (choice === 'Enable insecure TLS') {
-            await vscode.workspace
-              .getConfiguration('redmineCopilotBridge')
-              .update('allowInsecureTls', true, vscode.ConfigurationTarget.Global);
-            vscode.window.showInformationMessage(
-              'Insecure TLS enabled. Run "Import Ticket" again.'
-            );
+            try {
+              await cfg.update('allowInsecureTls', true, vscode.ConfigurationTarget.Global);
+              const after = vscode.workspace
+                .getConfiguration('redmineCopilotBridge')
+                .get<boolean>('allowInsecureTls', false);
+              vscode.window.showInformationMessage(
+                after
+                  ? 'Insecure TLS enabled. Run "Import Ticket" again.'
+                  : 'WARNING: the setting did NOT save (settings file may be read-only). Set "redmineCopilotBridge.allowInsecureTls": true manually.'
+              );
+            } catch (e) {
+              vscode.window.showErrorMessage(
+                `Failed to save setting: ${e instanceof Error ? e.message : String(e)}. Add "redmineCopilotBridge.allowInsecureTls": true to settings.json manually.`
+              );
+            }
           }
           return;
         }
